@@ -8,7 +8,6 @@ self.onmessage = (msg) => {
 
     for (let i = 0; i < num; ++i) {
       let result = findNext(seed, from)
-      console.log(result)
       self.postMessage(result)
       from = result.index + 1
     }

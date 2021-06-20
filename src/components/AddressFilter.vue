@@ -28,6 +28,7 @@
       </el-row>
     </el-card>
     <el-card v-if="results.length || isSearching">
+      <el-tag v-if="isSearching" type="warning"><i class="el-icon-loading"></i>{{$t("message.onSearching")}}</el-tag>
       <el-table :data="results" height="283" stripe>
         <el-table-column
           prop="index"

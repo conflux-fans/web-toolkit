@@ -50,7 +50,16 @@ const messages = {
             end: " is required for Conflux Testnet Faucet",
           }
         },
-        successClaim: 'Transaction is executed, but not confirmed.'
+        successClaim: 'Transaction is executed, but not confirmed.',
+        csv: {
+          drag: 'Drag CSV here, or ',
+          clickToUpload: 'click to upload',
+          resolve: 'Accepted: .csv',
+          format: 'Each row only contains 1 column: address to be converted',
+          titleLine: 'Title line is not required. If added, title line MUST be "address"',
+          big: 'May wait for a while for big CSV files',
+          checkExample: 'Check example',
+        },
       }
     },
   },
@@ -100,7 +109,16 @@ const messages = {
               end: "",
             }
           },
-          successClaim: '交易已执行，但尚未确认'
+          successClaim: '交易已执行，但尚未确认',
+          csv: {
+            drag: '将CSV文件拖到此处，或',
+            clickToUpload: '点击上传',
+            resolve: '支持的格式：.csv',
+            format: '每行仅一条数据，为待转换的地址',
+            titleLine: '不需要添加标题行，如果添加，标题行格式只能为 address',
+            big: '文件较大时请稍作等待',
+            checkExample: '查看示例',
+          },
         }
       }
   }

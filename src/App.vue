@@ -34,7 +34,7 @@
 
       <el-main class="main-background">
         <div id="nav">
-          <router-link to="/">Home</router-link> |
+          <router-link to="/address-converter">Address Converter</router-link> |
           <router-link to="/address-filter">Address Filter</router-link>
         </div>
           
@@ -80,7 +80,6 @@ export default {
       this.$i18n.locale = locale;
       localStorage.locale = locale;
     },
-    
     processError(err) {
       this.$alert(err.message, this.$t("message.error.error"));
     },
