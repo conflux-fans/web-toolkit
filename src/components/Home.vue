@@ -1,6 +1,6 @@
 <template>
   <el-card>
-    点击上侧选项 选择小工具
+    {{ $t('message.homeMessage') }}
   </el-card>
 </template>
 

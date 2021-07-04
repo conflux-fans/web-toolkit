@@ -22,3 +22,9 @@ npm run lint
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
+## TODOS
+
+- [x] i18n
+- [x] copy private key
+- [] address converter worker

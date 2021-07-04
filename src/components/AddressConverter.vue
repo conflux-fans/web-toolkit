@@ -2,10 +2,10 @@
   <div>
     <el-card>
       <el-row class="bold-font">
-        <el-col :span="5"> Source Format </el-col>
-        <el-col :offset="1" :span="5"> Target Format </el-col>
+        <el-col :span="5"> {{$t('message.addressConverter.sourceFormat')}} </el-col>
+        <el-col :offset="1" :span="5"> {{$t('message.addressConverter.targetFormat')}} </el-col>
         <el-col :offset="1" :span="4">
-          <div v-if="!toHex">Net ID</div>
+          <div v-if="!toHex">{{$t('message.addressConverter.netId')}}</div>
         </el-col>
         <el-col> </el-col>
       </el-row>
@@ -18,7 +18,7 @@
           <i class="el-icon-right"></i>
         </el-col>
         <el-col :span="5">
-          <el-select v-model="toHex" placeholder="请选择" size="small">
+          <el-select v-model="toHex" size="small">
             <el-option
               v-for="item in options"
               :key="item.value"
@@ -45,7 +45,7 @@
             :disabled="!fileList.length"
             size="small"
             type="primary"
-            >convert <i class="el-icon-refresh"></i>
+            >{{$t('message.addressConverter.convert')}} <i class="el-icon-refresh"></i>
           </el-button>
         </el-col>
         <el-col :offset="1" :span="3">
@@ -54,7 +54,7 @@
             :disabled="!fileList.length"
             size="small"
             type="info"
-            >RESET
+            >{{$t('message.addressConverter.reset')}}
           </el-button>
         </el-col>
       </el-row>
@@ -115,6 +115,9 @@
               {{ $t("message.tooltip.csv.titleLine") }}
             </el-row>
             <el-row>
+              {{ $t("message.tooltip.csv.multi") }}
+            </el-row>
+            <el-row>
               {{ $t("message.tooltip.csv.big") }}
             </el-row>
           </div>
@@ -161,9 +164,9 @@ export default {
     },
   },
   watch: {
-    fileList(newVal) {
-      console.log(newVal);
-    },
+    // fileList(newVal) {
+    //   console.log(newVal);
+    // },
   },
   methods: {
     hideError() {
@@ -171,11 +174,10 @@ export default {
     },
     clearFiles() {
       this.csvError = null;
+      this.fileList = []
       this.$refs.upload.clearFiles();
     },
     handleChange(file, fileList) {
-      console.log(file);
-      console.log(fileList);
       this.fileList = fileList;
     },
 
