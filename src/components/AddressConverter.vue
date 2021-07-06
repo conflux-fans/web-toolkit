@@ -29,24 +29,40 @@
           </el-select>
         </el-col>
         <el-col :offset="1" :span="4">
-          <el-input-number
+          <el-select
             v-if="!toHex"
             v-model="selectedNetId"
-            controls-position="right"
-            :min="1"
-            class="full-width"
+            clearable
+            filterable
+            allow-create
+            default-first-option
             size="small"
-          ></el-input-number>
+            :placeholder="$t('message.addressConverter.netPlaceholder')"
+            >
+            <el-option
+              v-for="item in networkOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            >
+            <span style="float: left">{{ item.label }}</span>
+            <span style="float: right; color: #8492a6; font-size: 13px">{{ item.value }}</span>
+            </el-option>
+          </el-select>
           <div>&nbsp;</div>
         </el-col>
         <el-col :offset="1" :span="3">
-          <el-button
-            @click="convertFile"
-            :disabled="!fileList.length"
-            size="small"
-            type="primary"
-            >{{$t('message.addressConverter.convert')}} <i class="el-icon-refresh"></i>
-          </el-button>
+          <el-tooltip :content="disabledTooltip" placement="top-start" :disabled="!convertDisabled">
+            <div>
+              <el-button
+                @click="convertFile"
+                :disabled="convertDisabled"
+                size="small"
+                type="primary"
+                >{{$t('message.addressConverter.convert')}} <i class="el-icon-refresh"></i>
+              </el-button>
+            </div>
+          </el-tooltip>
         </el-col>
         <el-col :offset="1" :span="3">
           <el-button
@@ -131,17 +147,14 @@
 import { parse, unparse } from "papaparse";
 import { default as sdk } from "js-conflux-sdk";
 
-window.sdk = sdk;
 
 export default {
   name: "AddressConverter",
   data() {
     return {
       csvError: null,
-      fileUploaded: false,
-      selectedNetId: "1",
-      toHex: true,
-      // file: null,
+      selectedNetId: "",
+      toHex: false,
       fileList: [],
       options: [
         {
@@ -153,9 +166,32 @@ export default {
           label: "base32",
         },
       ],
+      networkOptions: [
+        {
+          value: 1,
+          label: 'cfxtest'
+        },
+        {
+          value: 1029,
+          label: 'cfx'
+        }
+      ]
     };
   },
   computed: {
+    convertDisabled() {
+      return !this.fileList.length || this.selectedNetId===''
+    },
+    disabledTooltip() {
+      if (!this.fileList.length) {
+        return this.$t('message.addressConverter.noCsv')
+      }
+      if (this.selectedNetId === '') {
+        return this.$t('message.addressConverter.noNet')
+      }
+
+      return ""
+    },
     isCsvError() {
       return Boolean(this.csvError);
     },
@@ -164,9 +200,6 @@ export default {
     },
   },
   watch: {
-    // fileList(newVal) {
-    //   console.log(newVal);
-    // },
   },
   methods: {
     hideError() {
@@ -190,6 +223,9 @@ export default {
     },
     async convertFile() {
       try {
+        var r = /^[0-9]*$/ // 正整数
+        if (!r.test(this.selectedNetId))
+          throw new Error(`invalid netId: ${this.selectedNetId}`)
         for (let i = 0; i < this.fileList.length; ++i) {
           await this.convertSingleFile(this.fileList[i].raw);
         }
@@ -238,7 +274,6 @@ export default {
       if (csv_msg.length > 1) {
         throw new Error(csv_msg.join("\n"));
       } else {
-        // console.log(unparse(convertedAddresses))
         let csvContent =
           "data:text/csv;charset=utf-8," + unparse(convertedAddresses);
         let encodedUri = window.encodeURI(csvContent);

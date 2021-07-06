@@ -114,7 +114,6 @@
 import Worker from "../worker/search.worker";
 import { ethers } from "ethers";
 
-window.ethers = ethers;
 
 export default {
   name: "AddressFilter",

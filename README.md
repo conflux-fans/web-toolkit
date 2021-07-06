@@ -28,3 +28,5 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 - [x] i18n
 - [x] copy private key
 - [] address converter worker
+- [x] address converter tooltips
+- [] address filter todos
