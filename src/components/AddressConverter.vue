@@ -2,10 +2,14 @@
   <div>
     <el-card>
       <el-row class="bold-font">
-        <el-col :span="5"> {{$t('message.addressConverter.sourceFormat')}} </el-col>
-        <el-col :offset="1" :span="5"> {{$t('message.addressConverter.targetFormat')}} </el-col>
+        <el-col :span="5">
+          {{ $t("message.addressConverter.sourceFormat") }}
+        </el-col>
+        <el-col :offset="1" :span="5">
+          {{ $t("message.addressConverter.targetFormat") }}
+        </el-col>
         <el-col :offset="1" :span="4">
-          <div v-if="!toHex">{{$t('message.addressConverter.netId')}}</div>
+          <div v-if="!toHex">{{ $t("message.addressConverter.netId") }}</div>
         </el-col>
         <el-col> </el-col>
       </el-row>
@@ -18,7 +22,11 @@
           <i class="el-icon-right"></i>
         </el-col>
         <el-col :span="5">
-          <el-select v-model="toHex" size="small">
+          <el-select
+            v-model="toHex"
+            size="small"
+            :disabled="isConverting"
+            >
             <el-option
               v-for="item in options"
               :key="item.value"
@@ -30,6 +38,7 @@
         </el-col>
         <el-col :offset="1" :span="4">
           <el-select
+            :disabled="isConverting"
             v-if="!toHex"
             v-model="selectedNetId"
             clearable
@@ -38,28 +47,35 @@
             default-first-option
             size="small"
             :placeholder="$t('message.addressConverter.netPlaceholder')"
-            >
+          >
             <el-option
               v-for="item in networkOptions"
               :key="item.value"
               :label="item.label"
               :value="item.value"
             >
-            <span style="float: left">{{ item.label }}</span>
-            <span style="float: right; color: #8492a6; font-size: 13px">{{ item.value }}</span>
+              <span style="float: left">{{ item.label }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">{{
+                item.value
+              }}</span>
             </el-option>
           </el-select>
           <div>&nbsp;</div>
         </el-col>
         <el-col :offset="1" :span="3">
-          <el-tooltip :content="disabledTooltip" placement="top-start" :disabled="!convertDisabled">
+          <el-tooltip
+            :content="disabledTooltip"
+            placement="top-start"
+            :disabled="!convertDisabled"
+          >
             <div>
               <el-button
                 @click="convertFile"
-                :disabled="convertDisabled"
+                :disabled="convertDisabled || isConverting"
                 size="small"
                 type="primary"
-                >{{$t('message.addressConverter.convert')}} <i class="el-icon-refresh"></i>
+                >{{ $t("message.addressConverter.convert") }}
+                <i :class="convertIcon"></i>
               </el-button>
             </div>
           </el-tooltip>
@@ -67,17 +83,28 @@
         <el-col :offset="1" :span="3">
           <el-button
             @click="clearFiles"
-            :disabled="!fileList.length"
+            :disabled="!fileList.length || isConverting"
             size="small"
             type="info"
-            >{{$t('message.addressConverter.reset')}}
+            >{{ $t("message.addressConverter.reset") }}
           </el-button>
         </el-col>
       </el-row>
+      <el-progress
+        v-if="isConverting"
+        :text-inside="true"
+        :stroke-width="24"
+        :percentage="parseInt((receivedCount / fileList.length) * 100)"
+        status="success"
+      ></el-progress>
     </el-card>
     <el-card v-if="isCsvError">
-      <el-row >
-        <i style="float: right; cursor: pointer" class="el-icon-close" @click="hideError"></i>
+      <el-row>
+        <i
+          style="float: right; cursor: pointer"
+          class="el-icon-close"
+          @click="hideError"
+        ></i>
 
         <div
           style="color: red; height: 240px; overflow: scroll"
@@ -144,14 +171,15 @@
 </template>
 
 <script>
-import { parse, unparse } from "papaparse";
-import { default as sdk } from "js-conflux-sdk";
-
+import { unparse } from "papaparse";
+import Worker from "../worker/convert.worker";
 
 export default {
   name: "AddressConverter",
   data() {
     return {
+      isConverting: false,
+      receivedCount: 0,
       csvError: null,
       selectedNetId: "",
       toHex: false,
@@ -169,28 +197,33 @@ export default {
       networkOptions: [
         {
           value: 1,
-          label: 'cfxtest'
+          label: "cfxtest",
         },
         {
           value: 1029,
-          label: 'cfx'
-        }
-      ]
+          label: "cfx",
+        },
+      ],
     };
   },
   computed: {
+    convertIcon() {
+      if (this.isConverting)
+        return "el-icon-loading"
+      return "el-icon-refresh"
+    },
     convertDisabled() {
-      return !this.fileList.length || this.selectedNetId===''
+      return !this.fileList.length || this.selectedNetId === "";
     },
     disabledTooltip() {
       if (!this.fileList.length) {
-        return this.$t('message.addressConverter.noCsv')
+        return this.$t("message.addressConverter.noCsv");
       }
-      if (this.selectedNetId === '') {
-        return this.$t('message.addressConverter.noNet')
+      if (this.selectedNetId === "") {
+        return this.$t("message.addressConverter.noNet");
       }
 
-      return ""
+      return "";
     },
     isCsvError() {
       return Boolean(this.csvError);
@@ -199,102 +232,93 @@ export default {
       return this.csvError.message.split("\n");
     },
   },
-  watch: {
-  },
+  watch: {},
   methods: {
     hideError() {
       this.csvError = null;
     },
     clearFiles() {
       this.csvError = null;
-      this.fileList = []
+      this.fileList = [];
       this.$refs.upload.clearFiles();
     },
     handleChange(file, fileList) {
       this.fileList = fileList;
     },
-
-    // static tool function
-    convertAddressTo(address, netId) {
-      if (netId == -1) {
-        return sdk.format.hexAddress(address);
-      }
-      return sdk.format.address(address, parseInt(netId));
-    },
     async convertFile() {
+      this.csvError = null;
       try {
-        var r = /^[0-9]*$/ // 正整数
+        var r = /^[0-9]*$/; // 正整数
         if (!r.test(this.selectedNetId))
-          throw new Error(`invalid netId: ${this.selectedNetId}`)
+          throw new Error(`invalid netId: ${this.selectedNetId}`);
+
+        const worker = new Worker()
+
+        this.isConverting = true
+        this.receivedCount = 0
+
+        worker.onmessage = (msg) => {
+          let result = msg.data;
+          if (result.from !== "convert")
+            return;
+          this.receivedCount += 1
+          if (result.error) {
+            result.error._type = "csvError"
+            this.processError(result.error)
+          } else {
+            const { convertedAddresses, filename, netId } = result
+            this.downloadConvertedCsv(convertedAddresses, filename, netId)
+          }
+          if (this.receivedCount === this.fileList.length) 
+            this.isConverting = false
+        }
+
         for (let i = 0; i < this.fileList.length; ++i) {
-          await this.convertSingleFile(this.fileList[i].raw);
+          await this.postConvertMessage(worker, this.fileList[i].raw);
+          // await this.convertSingleFile(this.fileList[i].raw);
         }
       } catch (err) {
         err._type = "csvError";
         this.processError(err);
       }
     },
-    async convertSingleFile(file) {
-      const c = await file.text();
-      const rows = parse(c).data;
+    async postConvertMessage(worker, file) {
+      const filename = file.name
+      const text = await file.text()
+      const netId = this.toHex ? -1 : this.selectedNetId;
+      worker.postMessage({
+        filename,
+        text,
+        netId
+      })
+    },
+    downloadConvertedCsv(convertedAddresses, filename, netId) {
+      let csvContent =
+        "data:text/csv;charset=utf-8," + unparse(convertedAddresses);
+      let encodedUri = window.encodeURI(csvContent);
+      var link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
 
-      let convertedAddresses = [];
-      let csv_msg = [`Error occured in ${file.name}:`];
+      let namesplice = filename.split(".");
 
-      for (let i = 0; i < rows.length; ++i) {
-        const results = rows[i];
+      const suffix = this.toHex ? "hex" : `netId-${netId}`;
 
-        // 空行，会跳过其他判断直接进行下一行的处理
-        if (results.length === 1 && !results[0]) {
-          continue;
-        }
+      namesplice.splice(namesplice.length - 1, 0, suffix);
 
-        // 对每一行都进行错误检查 最后将所有行的错误一起抛出
-        try {
-          if (results.length !== 1) {
-            throw new Error("column count is not 1");
-          }
+      link.setAttribute("download", namesplice.join("."));
+      document.body.appendChild(link);
 
-          const addr = results[0].trim();
-
-          // 对标题行的判断
-          if (i === 0) {
-            if (addr === "address") {
-              continue;
-            }
-          }
-          // one line
-          const netId = this.toHex ? -1 : this.selectedNetId;
-          convertedAddresses.push([this.convertAddressTo(addr, netId)]);
-        } catch (e) {
-          csv_msg.push(`ERROR: CSV ROW ${i + 1} - ${e.message}`);
-        }
-      }
-
-      if (csv_msg.length > 1) {
-        throw new Error(csv_msg.join("\n"));
-      } else {
-        let csvContent =
-          "data:text/csv;charset=utf-8," + unparse(convertedAddresses);
-        let encodedUri = window.encodeURI(csvContent);
-        var link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-
-        let namesplice = file.name.split(".");
-
-        const suffix = this.toHex ? "hex" : `netId-${this.selectedNetId}`;
-
-        namesplice.splice(namesplice.length - 1, 0, suffix);
-
-        link.setAttribute("download", namesplice.join("."));
-        document.body.appendChild(link);
-
-        link.click();
-      }
+      link.click();
     },
     processError(err) {
       if (err._type === "csvError") {
-        this.csvError = err;
+        if (!this.csvError) {
+          this.csvError = err;
+        }
+        else {
+          err.message = `${this.csvError.message}\n${err.message}`
+          this.csvError = err
+        }
       } else {
         this.$alert(err.message, this.$t("message.error.error"));
       }

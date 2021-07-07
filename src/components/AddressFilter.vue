@@ -129,13 +129,17 @@ export default {
     };
   },
   methods: {
-    // TODO: 符合条件时，利用上一次的结果继续算
     async asyncSearch() {
-      this.results = [];
       this.isSearching = true;
-
       let worker = new Worker();
-      worker.postMessage({ mnemonic: this.mnemonic, num: this.num, from: 0 });
+      // 助记词保持不变 只增加num时 不重置result 接着之前的结果继续算
+      if (this.cachedMnemonic && this.cachedNum && this.cachedMnemonic === this.mnemonic && this.num > this.cachedNum) {
+        worker.postMessage({mnemonic: this.mnemonic, num: this.num - this.cachedNum, from: this.cachedIndex+1})
+      } else {
+        this.results = [];
+        worker.postMessage({ mnemonic: this.mnemonic, num: this.num, from: 0 });
+      }
+      
 
       worker.onmessage = (msg) => {
         let result = msg.data;
@@ -147,6 +151,7 @@ export default {
             this.processError(result.error);
           }
         } else {
+          this.cachedIndex = result.index
           this.results.push(result);
         }
       };
