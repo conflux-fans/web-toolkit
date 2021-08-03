@@ -32,7 +32,7 @@ self.onmessage = (msg) => {
           }
         }
         // one line
-        convertedAddresses.push([convertAddressTo(addr, netId)]);
+        convertedAddresses.push([addr, convertAddressTo(addr, netId)]);
       } catch (e) {
         csv_msg.push(`ERROR: CSV ROW ${i + 1} - ${e.message}`);
       }

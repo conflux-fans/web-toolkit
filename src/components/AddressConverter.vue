@@ -3,9 +3,6 @@
     <el-card>
       <el-row class="bold-font">
         <el-col :span="5">
-          {{ $t("message.addressConverter.sourceFormat") }}
-        </el-col>
-        <el-col :offset="1" :span="5">
           {{ $t("message.addressConverter.targetFormat") }}
         </el-col>
         <el-col :offset="1" :span="4">
@@ -15,12 +12,6 @@
       </el-row>
       <el-divider></el-divider>
       <el-row>
-        <el-col :span="5">
-          <label>Any</label>
-        </el-col>
-        <el-col :span="1">
-          <i class="el-icon-right"></i>
-        </el-col>
         <el-col :span="5">
           <el-select
             v-model="toHex"
@@ -51,52 +42,36 @@
             <el-option
               v-for="item in networkOptions"
               :key="item.value"
-              :label="item.label"
               :value="item.value"
             >
-              <span style="float: left">{{ item.label }}</span>
+              <span style="float: left">{{ item.value }}</span>
               <span style="float: right; color: #8492a6; font-size: 13px">{{
-                item.value
+                item.label
               }}</span>
             </el-option>
           </el-select>
           <div>&nbsp;</div>
         </el-col>
-        <el-col :offset="1" :span="3">
-          <el-tooltip
-            :content="disabledTooltip"
-            placement="top-start"
-            :disabled="!convertDisabled"
-          >
-            <div>
-              <el-button
-                @click="convertFile"
-                :disabled="convertDisabled || isConverting"
-                size="small"
-                type="primary"
-                >{{ $t("message.addressConverter.convert") }}
-                <i :class="convertIcon"></i>
-              </el-button>
-            </div>
-          </el-tooltip>
-        </el-col>
+        
         <el-col :offset="1" :span="3">
           <el-button
-            @click="clearFiles"
-            :disabled="!fileList.length || isConverting"
+            @click="downloadConvertedCsv"
+            :disabled="!this.result"
             size="small"
-            type="info"
-            >{{ $t("message.addressConverter.reset") }}
+            :type="status"
+            >{{ $t("message.addressConverter.download") }}
+            <i class="el-icon-download"></i>
           </el-button>
         </el-col>
+        <el-col :offset="1" :span="3">
+          <el-tag
+            v-if="isConverting"
+            type="primary"
+            >{{ $t("message.addressConverter.converting") }}
+            <i :class="convertIcon"></i>
+          </el-tag>
+        </el-col>
       </el-row>
-      <el-progress
-        v-if="isConverting"
-        :text-inside="true"
-        :stroke-width="24"
-        :percentage="parseInt((receivedCount / fileList.length) * 100)"
-        status="success"
-      ></el-progress>
     </el-card>
     <el-card v-if="isCsvError">
       <el-row>
@@ -128,6 +103,7 @@
           :on-change="handleChange"
           :auto-upload="false"
           :multiple="false"
+          :disabled="isConverting"
           accept="text/csv"
         >
           <!-- <i class="el-icon-upload2" style="font-size: 8em"></i> -->
@@ -158,9 +134,6 @@
               {{ $t("message.tooltip.csv.titleLine") }}
             </el-row>
             <el-row>
-              {{ $t("message.tooltip.csv.multi") }}
-            </el-row>
-            <el-row>
               {{ $t("message.tooltip.csv.big") }}
             </el-row>
           </div>
@@ -179,15 +152,15 @@ export default {
   data() {
     return {
       isConverting: false,
-      receivedCount: 0,
+      result: null,
       csvError: null,
-      selectedNetId: "",
+      selectedNetId: "1029",
       toHex: false,
       fileList: [],
       options: [
         {
           value: true,
-          label: "hex40",
+          label: "hex",
         },
         {
           value: false,
@@ -196,17 +169,22 @@ export default {
       ],
       networkOptions: [
         {
-          value: 1,
+          value: "1",
           label: "cfxtest",
         },
         {
-          value: 1029,
+          value: "1029",
           label: "cfx",
         },
       ],
     };
   },
   computed: {
+    status() {
+      if (this.result)
+        return 'success'
+      return 'info'
+    },
     convertIcon() {
       if (this.isConverting)
         return "el-icon-loading"
@@ -214,16 +192,6 @@ export default {
     },
     convertDisabled() {
       return !this.fileList.length || this.selectedNetId === "";
-    },
-    disabledTooltip() {
-      if (!this.fileList.length) {
-        return this.$t("message.addressConverter.noCsv");
-      }
-      if (this.selectedNetId === "") {
-        return this.$t("message.addressConverter.noNet");
-      }
-
-      return "";
     },
     isCsvError() {
       return Boolean(this.csvError);
@@ -244,39 +212,47 @@ export default {
     },
     handleChange(file, fileList) {
       this.fileList = fileList;
+      this.convertFile();
+      this.$refs.upload.clearFiles();
     },
     async convertFile() {
       this.csvError = null;
       try {
-        var r = /^[0-9]*$/; // 正整数
-        if (!r.test(this.selectedNetId))
-          throw new Error(`invalid netId: ${this.selectedNetId}`);
+        if (!this.toHex) {
+          if (this.selectedNetId === "")
+            throw new Error("Invalid empty network Id")
+          var r = /^[0-9]*$/; // 正整数
+          if (!r.test(this.selectedNetId))
+            throw new Error(`Invalid network Id: ${this.selectedNetId}`);
+        }
 
         const worker = new Worker()
 
         this.isConverting = true
+        this.result = null
         this.receivedCount = 0
 
         worker.onmessage = (msg) => {
           let result = msg.data;
           if (result.from !== "convert")
             return;
-          this.receivedCount += 1
           if (result.error) {
             result.error._type = "csvError"
             this.processError(result.error)
           } else {
-            const { convertedAddresses, filename, netId } = result
-            this.downloadConvertedCsv(convertedAddresses, filename, netId)
+            this.result = result
+            this.$notify({
+              type: 'success',
+              title: this.$t('message.addressConverter.success'),
+              offset: 60,
+              duration: 6000,
+            })
           }
-          if (this.receivedCount === this.fileList.length) 
-            this.isConverting = false
+          this.isConverting = false
+          
         }
 
-        for (let i = 0; i < this.fileList.length; ++i) {
-          await this.postConvertMessage(worker, this.fileList[i].raw);
-          // await this.convertSingleFile(this.fileList[i].raw);
-        }
+        await this.postConvertMessage(worker, this.fileList[0].raw);
       } catch (err) {
         err._type = "csvError";
         this.processError(err);
@@ -292,7 +268,8 @@ export default {
         netId
       })
     },
-    downloadConvertedCsv(convertedAddresses, filename, netId) {
+    downloadConvertedCsv() {
+      const { convertedAddresses, filename, netId } = this.result
       let csvContent =
         "data:text/csv;charset=utf-8," + unparse(convertedAddresses);
       let encodedUri = window.encodeURI(csvContent);
